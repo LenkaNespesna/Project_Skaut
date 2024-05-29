@@ -1,0 +1,4 @@
+CREATE OR REPLACE TABLE "D_TI" AS
+SELECT DISTINCT "Year" AS "ID_TI"
+from "OU_UnitRegistration"
+ORDER BY "Year" ASC;
