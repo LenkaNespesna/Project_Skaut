@@ -1,0 +1,68 @@
+-- vytvoření DOČASNÉ tabulky TEMP_Stat_L1 - tabulka se spojenými daty z jednotlivých let, určená k čistění
+
+CREATE OR REPLACE TEMPORARY TABLE "TEMP_Stat_L1" AS
+SELECT * FROM "PocetObyvatel2010"
+UNION ALL
+SELECT * FROM "PocetObyvatel2011"
+UNION ALL
+SELECT * FROM "PocetObyvatel2012"
+UNION ALL
+SELECT * FROM "PocetObyvatel2013"
+UNION ALL
+SELECT * FROM "PocetObyvatel2014"
+UNION ALL 
+SELECT * FROM "PocetObyvatel2015"
+UNION ALL
+SELECT * FROM "PocetObyvatel2016"
+UNION ALL
+SELECT * FROM "PocetObyvatel2017"
+UNION ALL
+SELECT * FROM "PocetObyvatel2018"
+UNION ALL
+SELECT * FROM "PocetObyvatel2019"
+UNION ALL
+SELECT * FROM "PocetObyvatel2020"
+UNION ALL
+SELECT * FROM "PocetObyvatel2021"
+UNION ALL
+SELECT * FROM "PocetObyvatel2022"
+UNION ALL
+SELECT * FROM "PocetObyvatel2023"
+UNION ALL
+SELECT * FROM "PocetObyvatel2024"
+;
+
+
+--Odstranění prázdných řádků
+
+DELETE FROM "TEMP_Stat_L1"
+WHERE "nazev_obce" = '';
+
+
+--Odstranění mezer v číselných údajích, vytvoření nové tabulky ze selectu za současného přetypování sloupce
+
+CREATE OR REPLACE TABLE "Stat_L1" AS
+
+SELECT "rok",
+       "kod_obce",
+       "nazev_obce",
+       TO_NUMBER(REPLACE("celkem", ' ', ''), 38,0) AS "celkem"
+FROM "TEMP_Stat_L1";
+
+
+
+-- přidání kategorie velikosti obce
+
+-- 1) vytvoření nového sloupce
+ALTER TABLE "Stat_L1" ADD COLUMN "velikost_obce" varchar (20);
+
+--2) naplnění sloupce hodnotami
+UPDATE "Stat_L1"
+SET "velikost_obce" = 
+    CASE
+        WHEN "celkem" < 2000 THEN '<2 000'
+        WHEN "celkem" < 10000 THEN '2 000 - 9 999'
+        WHEN "celkem" < 50000 THEN '10 000 - 49 999'
+        WHEN "celkem" < 100000 THEN '50 000 - 99 999'
+        WHEN "celkem" >= 100000 THEN '100 000 +'
+    END;
