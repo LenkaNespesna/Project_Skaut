@@ -70,7 +70,6 @@ UPDATE "F_UnitRegistration"
 SET "RegularMembers_UnitParent" = IFNULL("RegularMembers_UnitParent", 0)
 ;
 
-
 --přidání počtu kvalifikací (vůdcovky, čekatelky)
 --1) VŮDCOVKY
 
@@ -90,7 +89,7 @@ WHERE q."ID_QualificationType"='6'
 
 -- SEČÍST POČET 1 PRO PŘÍSLUŠNÉ ID_UnitRegistration a vložit jako nový sloupec
 -- názvy sloupců vypsány explicitně, alias.* nefungoval
-CREATE OR REPLACE TEMP TABLE "temp_vud" AS
+CREATE OR REPLACE TABLE "F_UnitRegistration" AS
 SELECT  
     ur."ID_UnitRegistration",
     ur."ID_Unit", 
@@ -142,14 +141,6 @@ HAVING
           END) > 0
 ;
 
--- tabulku najoinovat na původní F_UnitRegistration, abych zůstal zachován počet řádků
-
-CREATE OR REPLACE TABLE "F_UnitRegistration" AS
-SELECT ur.* 
-    ,tempvud."pocet_vudcovske_zkousky"
-FROM "F_UnitRegistration" AS ur
-LEFT JOIN "temp_vud" AS tempvud ON ur."ID_UnitRegistration" = tempvud."ID_UnitRegistration";
-
 --2)čekatelky
 --spojím PersonRegistration inner joinem s Qualification, kde je druh kvalifikace = 4, vytvořím temp tabulku
 
@@ -169,7 +160,7 @@ WHERE q."ID_QualificationType"=4
 
 -- SEČÍST POČET 1 PRO PŘÍSLUŠNÉ ID_UnitRegistration a vložit jako nový sloupec, 
 
-CREATE OR REPLACE TEMP TABLE "temp_cek" AS --ur.* mi nefungovalo, proto jsou sloupce vypsané
+CREATE OR REPLACE TABLE "F_UnitRegistration" AS --ur.* mi nefungovalo, proto jsou sloupce vypsané
 SELECT 
     ur."ID_UnitRegistration",
     ur."ID_Unit", 
@@ -223,10 +214,3 @@ HAVING
           END) > 0
 ;
 
--- tabulku najoinovat na původní F_UnitRegistration, abych zůstal zachován počet řádků
-
-CREATE OR REPLACE TABLE "F_UnitRegistration" AS
-SELECT ur.* 
-    ,tempcek."pocet_cekatelske_zkousky"
-FROM "F_UnitRegistration" AS ur
-LEFT JOIN "temp_cek" AS tempcek ON ur."ID_UnitRegistration" = tempcek."ID_UnitRegistration";
