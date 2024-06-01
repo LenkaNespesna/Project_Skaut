@@ -12,7 +12,7 @@ FROM "OU_UnitCityCode"
 ;
 
 --přidání sloupce koedukace
---projde název membershipu, pokud patří do klučičích názvů, započte 1 do sloupce 'kluci', pokud patří do holčičích názvů, započte 1 do sloupce 'holky'
+--projde název v tabulce D_Membership, pokud patří do klučičích názvů, započte 1 do sloupce 'kluci', pokud patří do holčičích názvů, započte 1 do sloupce 'holky'
 --potom grupuji podle ID_Unit - když je součet v 'kluci'>0 a zároveň součet v 'holky'>0, pak se jedná o koedukovanou jednotku. Pokud je hodnota v jednom ze sloupců 0, jedná se o single edukaci, napíše holky/kluci
 -- uložím jako temp tabulku
 
@@ -49,9 +49,9 @@ LEFT JOIN "TEMP_KOEDUKACE" as temped ON u."ID_Unit"=temped."ID_Unit"
 
 
 --jak dlouho vede vedoucí oddíl
-
--- Create a temporary table with the unit duration
+--- Vytvořím si dočasnou tabulku, kde od roku 1993 počítám délku vedení oddílu
 CREATE OR REPLACE TEMPORARY TABLE UNIT_DURATION AS
+--- CTE vypočítávající trvání funkce
 WITH FunctionType1 AS (
     SELECT 
         p."ID_Person",
@@ -63,11 +63,14 @@ WITH FunctionType1 AS (
         EXTRACT(YEAR FROM COALESCE(p."ValidTo", CURRENT_DATE)) AS YearTo
     FROM 
         "D_Function" p
+    --- Typ 92 je vedoucí oddílu a typ 174 je zástupce vedoucího oddílu
     WHERE p."ID_FunctionType" IN (92, 174)
     AND p."ValidFrom" >= DATE '1993-01-01'
+    --- V tabulce se objevily chyby, kdy údaj ValidTo byl dříve než ValidFrom, ty odstraníme
+    --- ValidTo IS NULL znamená, že osoba je stále ve funkci
     AND (p."ValidTo" > p."ValidFrom" OR p."ValidTo" IS NULL)
 ),
-
+--- CTE s napojením na tabulku registrace, kde počítáme jen s velkými oddíly a v letech, kdy opravdu velkými oddíly byly (tedy měli aspoň 40 členů)
 YearlyDurations AS (
     SELECT 
         f."ID_Unit",
@@ -100,6 +103,7 @@ ORDER BY
 CREATE OR REPLACE TABLE "D_Unit" AS
 SELECT 
     u.*,
+    ---V některých vyšších org. jednotkách bude funkce vedoucí oddílu NULL
     IFNULL(d."PrumerVedouci", 0) AS "PrumerVedouci"
 FROM 
     "D_Unit" u
