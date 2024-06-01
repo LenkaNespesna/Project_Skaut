@@ -50,6 +50,7 @@ LEFT JOIN "TEMP_KOEDUKACE" as temped ON u."ID_Unit"=temped."ID_Unit"
 
 --jak dlouho vede vedoucí oddíl
 
+-- Create a temporary table with the unit duration
 CREATE OR REPLACE TEMPORARY TABLE UNIT_DURATION AS
 WITH FunctionType1 AS (
     SELECT 
@@ -57,40 +58,52 @@ WITH FunctionType1 AS (
         p."ID_Unit",
         p."ValidFrom",
         p."ValidTo",
-        DATEDIFF('days', p."ValidFrom", COALESCE(p."ValidTo", CURRENT_DATE)) AS Duration
+        DATEDIFF('days', p."ValidFrom", COALESCE(p."ValidTo", CURRENT_DATE)) AS Duration,
+        EXTRACT(YEAR FROM p."ValidFrom") AS YearFrom,
+        EXTRACT(YEAR FROM COALESCE(p."ValidTo", CURRENT_DATE)) AS YearTo
     FROM 
         "D_Function" p
-    WHERE 1=1
-    AND (p."ID_FunctionType" = 92 OR p."ID_FunctionType" = 174)
-    AND p."ValidFrom" >= DATE('1993-01-01')
+    WHERE p."ID_FunctionType" IN (92, 174)
+    AND p."ValidFrom" >= DATE '1993-01-01'
     AND (p."ValidTo" > p."ValidFrom" OR p."ValidTo" IS NULL)
 ),
 
 YearlyDurations AS (
     SELECT 
-        u."ID_Unit",
-        f.Duration
+        f."ID_Unit",
+        f.Duration,
+        f.YearFrom,
+        f.YearTo,
+        ur."ID_TI",
+        ur."RegularMembers"
     FROM 
         FunctionType1 f
-    LEFT JOIN 
-        "D_Unit" u ON f."ID_Unit" = u."ID_Unit"
+    JOIN 
+        "F_UnitRegistration" ur ON f."ID_Unit" = ur."ID_Unit"
+    WHERE 
+        ur."RegularMembers" > 40
+        AND ur."ID_TI" BETWEEN f.YearFrom AND f.YearTo
 )
 
 SELECT 
-    "ID_Unit",
-    ROUND(AVG(Duration)/365, 2) AS AverageStayDuration
+    yd."ID_Unit",
+    ROUND(AVG(yd.Duration)/365, 2) AS "PrumerVedouci"
 FROM 
-    YearlyDurations
+    YearlyDurations yd
 GROUP BY 
-    "ID_Unit"
+    yd."ID_Unit"
 ORDER BY 
-    "ID_Unit"
+    yd."ID_Unit"
 ;
 
+-- Update the D_Unit table with the average stay duration
 CREATE OR REPLACE TABLE "D_Unit" AS
 SELECT 
-    U.*
-    , IFNULL(D.AverageStayDuration, 0) AS "PrumerVedouci"
-FROM "D_Unit" u
-LEFT JOIN UNIT_DURATION d on d."ID_Unit" = u."ID_Unit"
+    u.*,
+    IFNULL(d."PrumerVedouci", 0) AS "PrumerVedouci"
+FROM 
+    "D_Unit" u
+LEFT JOIN 
+    UNIT_DURATION d ON d."ID_Unit" = u."ID_Unit"
 ;
+
