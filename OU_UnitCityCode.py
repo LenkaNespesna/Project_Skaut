@@ -33,10 +33,12 @@ for unit in units:
           unit["kodobce"] = city["kodobce"]
           match_found = True
           break
+        # Někde mám jen informaci o o PSČ, napáruji pomocí něho 
       elif city["psc"] == unit.get("Postcode"):
         unit["kodobce"] = city["kodobce"]
         match_found = True
         break
+      # Někdy se název obce z ČSÚ nachází ve sloupci "nazev_casti_obce"
       elif  city["nazev_casti_obce"] in unit.get("City") or city["nazev_casti_obce"] in unit.get("Location"):
         unit["kodobce"] = city["kodobce"]
         match_found = True
